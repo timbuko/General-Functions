@@ -1,41 +1,30 @@
-function [POD_Modes, a, energy,cumEnergy,varargout] = computeNU_POD2(data,w)
+function [POD_Modes, a, energy,varargout] = computeNU_POD2(data,w)
 %Weighted POD
 
 %% Get data in right form (rows - space, cols - time)
 %1
+
 if ndims(data)==3 %If 3D matrix
-    WF2 = data;
-    TT = size(WF2,3); %TT time indicies
-    indtest = ones(size(WF2,1),size(WF2,2)); %spatial indicies
-    for i = 1:TT
-        indtest = indtest.*(isnan(WF2(:,:,i))==0);%find locations without nans at any time
-    end
-    ind = find(indtest); %ind - indices with no nans at any time
+    TT = size(data,3); %TT time indicies    
+    ind = find(~isnan(sum(data,3))); %ind - indices with no nans at any time
 %2
     WF = zeros(length(ind),TT);
     for i = 1:TT
-        WF3 = WF2(:,:,i); 
+        WF3 = data(:,:,i); 
         WF(:,i)=WF3(ind); %reshape non-nan values for a frame into a column
     end
     %At this point have matrix with each column all the spatial points for a given time 
     
 elseif ndims(data)==2 %If 2D matrix
     TT = size(data,2);
-    WF2=data;
-    indtest = ones(size(WF2,1),1);
-    for i = 1:TT
-        indtest = indtest.*(~isnan(WF2(:,i)));
-%         indtest = indtest.*(isinf(WF(:,i))==0);
-    end
-    ind = find(indtest);
-    WF = WF2(ind,:);
+    ind = find(~isnan(sum(data,2))); %ind - indices with no nans at any time
+    WF = data(ind,:);
 end
     %At this point have matrix with each column all the spatial points for a given time
     %dim of WF are lenght(ind) by TT
 
 %%  Calculation
 [M,N]=size(WF);
-
 [id1 id2]=size(w);
 if id1==1
     wi=w(ind);
@@ -47,6 +36,7 @@ wj=wi';
 WFMean = mean(WF,2); %temporal mean
 WF = WF - repmat(WFMean,1,N); %subtract temporal mean
 wf=WF.*sqrt(wj);
+clear WF WFMean
 
 if 1%M<=N %Direct Method
 %     R = zeros(M);
@@ -58,9 +48,9 @@ if 1%M<=N %Direct Method
     R=(wf*wf')/N;
     
     [Vectors,Values]=eig(R);
+    clear R
     [Vectors, Values] = sortem(Vectors,Values); 
-    energy = diag(Values)/sum(sum(Values));
-    cumEnergy=cumsum(energy);
+    energy = diag(Values)/sum(sum(Values)); 
     Psi_tild=Vectors;
     a=wf'*Psi_tild;
     
@@ -90,20 +80,18 @@ if 1%M<=N %Direct Method
 end
 
 Modes=Psi_tild./sqrt(wj);
-%Convert back to original form
+%% Convert back to original form
 if ndims(data)==3
 ModeShapes = NaN(size(WF2,1),size(WF2,2),length(energy));
-    for i = 1:N%convert Modes back from col vector to grid (each sheet is a mode)
+    for i = 1:length(energy)%convert Modes back from col vector to grid (each sheet is a mode)
         CurrMode = NaN(size(WF2,1),size(WF2,2));
         CurrMode(ind)=Modes(:,i);%Modes cols are different modes, rows are locations
         ModeShapes(:,:,i)=CurrMode;%Modeshape puts modes back grid location
     end
 elseif ndims(data)==2
         ModeShapes = NaN(size(WF2,1),length(energy));
-    for i = 1:N
-        CurrMode = NaN(size(WF2,1),1);
-        CurrMode(ind)=Modes(:,i);
-        ModeShapes(:,i)=CurrMode;
+    for i = 1:length(energy)
+        ModeShapes(ind,i)=CurrMode;
     end
 end
 

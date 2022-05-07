@@ -25,7 +25,7 @@ function [ POD_Modes, Time_Coeff, energy,varargout ] = computePOD3(Nparam, varar
 %               - has third dimension corresponding to data sets
 %    energy     - Normalized eigenvalues of each POD mode
 
-% Updated 5/5/22 Tim Bukowski to accept 2D data
+% Updated 5/5/22 Tim Bukowski to accept 2D data matrix
 %% Parse Inputs
 p = inputParser;
 addRequired( p, 'Nparam'  , @isnumeric)

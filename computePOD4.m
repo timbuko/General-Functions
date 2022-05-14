@@ -29,12 +29,14 @@ function [ POD_Modes, Time_Coeff, energy,varargout ] = computePOD3(Nparam, varar
 %ComputePOD4  changed to use a^2 as energy instead of eigenvalues
 %% Parse Inputs
 p = inputParser;
+default=false;
 addRequired( p, 'Nparam'  , @isnumeric)
 addRequired(p, 'data1', @isnumeric)
 for ii=2:Nparam
 addOptional(p, ['data',num2str(ii)]   , @isnumeric);
 end
 addParameter(p,'w', @isnumeric)
+addParameter(p,'normalize',default)
 
 
 parse(p, Nparam,varargin{:});
@@ -47,14 +49,22 @@ if ndims(p.Results.data1)==3
     for ii=1:Nparam
         dat(:,:,:,ii) = p.Results.(['data',num2str(ii)]);    
     end
-    data=mean(dat,4); %combine datasets by taking average
+    if p.Results.normalize
+        data=mean(dat./mean(std(dat,0,3),[1 2],'omitnan'),4); %combine datasets by taking average
+    else                                %divide by spatial average of RMS to normalize if desired
+        data=mean(dat,4);
+    end
     if ~isa(w,'double');w=ones(size(data,1),size(data,2));end
 elseif ndims(p.Results.data1)==2
     dat=zeros(size(p.Results.data1,1),size(p.Results.data1,2),Nparam);
     for ii=1:Nparam
         dat(:,:,ii) = p.Results.(['data',num2str(ii)]);    
     end
-    data=mean(dat,3); %combine datasets by taking average
+    if p.Results.normalize
+        data=mean(dat./mean(std(dat,0,2),'omitnan'),3); %combine datasets by taking average
+    else                                %divide by RMS to normalize if desired
+        data=mean(dat,3);
+    end
     if ~isa(w,'double');w=ones(size(data,1),1);end
 end
 
@@ -115,6 +125,7 @@ Modes=Psi_tild./sqrt(wj);
  
  %sort modes and coefficients by energy (sorts by energy of first dataset)
     energy=squeeze(mean(a.^2,1))./sum(squeeze(mean(a.^2,1)));
+    if size(energy,1)==1;energy=energy';end
     [~,idx]=sort(energy(:,1));
     idx=flipud(idx);
     energy=energy(idx,:);

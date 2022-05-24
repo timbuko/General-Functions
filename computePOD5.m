@@ -28,9 +28,10 @@ function [ POD_Modes, Time_Coeff, energy,varargout ] = computePOD5(Nparam, varar
 % Updated 5/5/22 Tim Bukowski to accept 2D data matrix
 %ComputePOD2 updated from Matts version
 %ComputePOD3 updated to allow both POD and JPOD weighted and unweighted -
-%             averages data, not R
+%             averages data, not R 
 %ComputePOD4  changed to use a^2 as energy instead of eigenvalues
 %ComputePOD5 averages R instead of averaging the data from each geometry
+%            fixed so that it uses mean removed data to find time coeff
 %% Parse Inputs
 p = inputParser;
 default=false;
@@ -46,6 +47,7 @@ addParameter(p,'OrderBy',defaultOrder)
 
 
 parse(p, Nparam,varargin{:});
+clear varargin
 
 Nparam          = p.Results.Nparam;
 w               = p.Results.w;
@@ -68,10 +70,10 @@ for kk=1:Nparam
         if p.Results.normalize;rms=mean(std(data,0,3,'omitnan'),[1 2],'omitnan');end
         if ~isa(w,'double');w=ones(size(data,1),size(data,2));end
         TT = size(data,3); %TT time indicies  
-        WF = zeros(length(ind),TT);
+        WF{kk} = zeros(length(ind),TT);
         for i = 1:TT
             WF3 = data(:,:,i); 
-            WF(:,i)=WF3(ind); %reshape non-nan values for a frame into a column
+            WF{kk}(:,i)=WF3(ind); %reshape non-nan values for a frame into a column
         end
         w=reshape(w,length(WF3(:)),1);
         %At this point have matrix with each column all the spatial points for a given time 
@@ -80,14 +82,13 @@ for kk=1:Nparam
         data=p.Results.(['data',num2str(kk)]);
         if p.Results.normalize;rms=mean(std(data,0,2,'omitnan'),'omitnan');end
         if ~isa(w,'double');w=ones(size(data,1),1);end
-        TT = size(data,2);
-        WF = data(ind,:);
+        WF{kk} = data(ind,:);
     end
         %At this point have matrix with each column all the spatial points for a given time
         %dim of WF are lenght(ind) by TT
 
 %% Calculation   
-    [M,N]=size(WF);
+    [M,N]=size(WF{kk});
     [id1,id2]=size(w);
     if id1==1
         wi=w(ind);
@@ -96,10 +97,10 @@ for kk=1:Nparam
     end
     wj=wi';
 
-    WFMean = mean(WF,2); %temporal mean
-    WF = WF - repmat(WFMean,1,N); %subtract temporal mean
-    wf=WF.*sqrt(wj);
-    clear WF WFMean
+    WFMean = mean(WF{kk},2); %temporal mean
+    WF{kk} = WF{kk} - repmat(WFMean,1,N); %subtract temporal mean
+    wf=WF{kk}.*sqrt(wj);
+    clear WFMean
     if p.Results.normalize
          C(:,:,kk)=wf*wf'/(rms^2*N); %C is temporal average AA'  
                                      %normalized by the spatially averaged temporal rms
@@ -113,18 +114,9 @@ Psi_tild=Vectors;
 Modes=Psi_tild./sqrt(wj);
 
  %% Time Ceofficient   
- DATA_REF=zeros(M,N);
  a=zeros(N,M,Nparam);
  for kk=1:Nparam
-    if ndims(data)==3 %If 3D matrix
-        for i = 1:TT
-            WF3 = p.Results.(['data',num2str(kk)])(:,:,i); 
-            DATA_REF(:,i)=WF3(ind); %reshape non-nan values for a frame into a column
-        end
-    elseif ndims(data)==2 %If 2D matrix
-        DATA_REF = p.Results.(['data',num2str(kk)])(ind,:);
-    end
-    a(:,:,kk)=DATA_REF'*Psi_tild;
+    a(:,:,kk)=WF{kk}'*Psi_tild;
  end
  
  %sort modes and coefficients by energy (sorts by energy of first dataset)

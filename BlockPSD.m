@@ -19,8 +19,12 @@ end
 if nargin>3
     dim=varargin{2};
 end
-data=data(1:end-mod(length(data),Nblock)); %shorten data so N/Nblock is int
-N=size(data,dim);
+
+permutation=[dim,2,3];permutation(dim)=1;
+data=permute(data,permutation); %convert data so vector is dim 1
+
+data=data(1:end-mod(size(data,1),Nblock),:,:); %shorten data so N/Nblock is int
+N=size(data,1);
 NN=N/Nblock;
 f=fs*(0:NN-1)'/NN;
 win=1-cos((1:NN)*pi/NN).^2;
@@ -29,10 +33,8 @@ win2=meshgrid(win,1:Nblock)';
 % ftv1=sqrt(8/3)*fft(x1)/NN;
 % PSD=mean(abs(ftv1).^2/(fs/NN),2);
 
-permutation=[dim,2,3];permutation(dim)=1;
-permute(data,permutation); %convert data so vector is dim 1
-x1=reshape(data,NN,Nblock,size(data,permutation(2)),[]).*win2;
+x1=reshape(data,NN,Nblock,size(data,2),[]).*win2;
 ftv1=sqrt(8/3)*fft(x1,[],1)/NN;
-PSD=mean(abs(ftv1).^2/(fs/NN),2);
+PSD=squeeze(mean(abs(ftv1).^2/(fs/NN),2));
 PSD=permute(PSD,permutation); %convert data back to original form
 end

@@ -96,7 +96,9 @@ data=data(1:end-chop,:,:); %shorten data so N/Nblock is int
 end
 
 if p.Results.blockSize~=0
+    N=size(data,1);
     NN=p.Results.blockSize;
+    Nblock = N/NN;
 else
     N=size(data,1);
     NN=N/Nblock;

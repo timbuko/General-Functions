@@ -116,10 +116,18 @@ end
 if strcmp(p.Results.window, 'hanning')
     win=0.5*(1-cos(2*pi*(1:NN)/NN)); %Hanning Window
     win2=meshgrid(win,1:Nblock)';
-    x1=reshape(data,NN,Nblock,size(p.Results.data,2),[]).*win2;
+    if ndims(data)>2
+        x1=reshape(data,NN,Nblock,size(data,2),[]).*win2;
+    else
+        x1=reshape(data,NN,Nblock,[]).*win2;
+    end
     ck=sqrt(8/3)*fft(x1,[],1)/NN;
 elseif strcmp(p.Results.window, 'none')
-    x1=reshape(data,NN,Nblock,size(p.Results.data,2),[]);
+    if ndims(data)>2
+        x1=reshape(data,NN,Nblock,size(data,2),[]);
+    else
+        x1=reshape(data,NN,Nblock,[]);
+    end
     ck=fft(x1,[],1)/NN;
 end
 

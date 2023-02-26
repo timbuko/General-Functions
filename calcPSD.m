@@ -106,12 +106,12 @@ end
 
 f=(0:NN-1)'*fs/NN;
 if overlap~=0
+    if ndims(data)>2;error('Overlap with 3D data is not supported');end
     xPadded = [data;zeros(floor(NN*overlap),1)];
-    Nblock = ceil(length(data)/(NN*(1-overlap)))-2;
+    Nblock = ceil(size(data,1)/(NN*(1-overlap)))-2;
     data = zeros(NN,Nblock);
     for i = 1:Nblock
-        start = round((i-1)*NN*(1-overlap) + 1)
-    st = start+NN-1
+        start = round((i-1)*NN*(1-overlap) + 1);
         data(:,i) = xPadded(start:start+NN-1);
     end
 end

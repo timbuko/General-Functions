@@ -96,7 +96,9 @@ data=data(1:end-chop,:,:); %shorten data so N/Nblock is int
 end
 
 if p.Results.blockSize~=0
+    N=size(data,1);
     NN=p.Results.blockSize;
+    Nblock = N/NN;
 else
     N=size(data,1);
     NN=N/Nblock;
@@ -104,22 +106,30 @@ end
 
 f=(0:NN-1)'*fs/NN;
 if overlap~=0
+    if ndims(data)>2;error('Overlap with 3D data is not supported');end
     xPadded = [data;zeros(floor(NN*overlap),1)];
-    Nblock = ceil(length(data)/(NN*(1-overlap)))-2;
+    Nblock = ceil(size(data,1)/(NN*(1-overlap)))-2;
     data = zeros(NN,Nblock);
     for i = 1:Nblock
-        start = round((i-1)*NN*(1-overlap) + 1)
-    st = start+NN-1
+        start = round((i-1)*NN*(1-overlap) + 1);
         data(:,i) = xPadded(start:start+NN-1);
     end
 end
 if strcmp(p.Results.window, 'hanning')
     win=0.5*(1-cos(2*pi*(1:NN)/NN)); %Hanning Window
     win2=meshgrid(win,1:Nblock)';
-    x1=reshape(data,NN,Nblock,size(p.Results.data,2),[]).*win2;
+    if ndims(data)>2
+        x1=reshape(data,NN,Nblock,size(data,2),[]).*win2;
+    else
+        x1=reshape(data,NN,Nblock,[]).*win2;
+    end
     ck=sqrt(8/3)*fft(x1,[],1)/NN;
 elseif strcmp(p.Results.window, 'none')
-    x1=reshape(data,NN,Nblock,size(p.Results.data,2),[]);
+    if ndims(data)>2
+        x1=reshape(data,NN,Nblock,size(data,2),[]);
+    else
+        x1=reshape(data,NN,Nblock,[]);
+    end
     ck=fft(x1,[],1)/NN;
 end
 

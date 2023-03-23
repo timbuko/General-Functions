@@ -65,7 +65,12 @@ function [ POD_Modes, Time_Coeff, energy, varargout ] = computePOD5(data, vararg
 %   to get the temporal coefficients and energies. 
 %   
 %   There are two checks to see if POD worked correctly:
-%            xtas
+%           1) Check modes are orthonormal
+%               
+%               sum Φ_n Φ_m ds = 1 if m=n
+%                              = 0 if m~=n
+%
+%           2) Check that p(s,t) = sum a_n(t)Φ_n(s) 
 %
 %   This function only works for 1 and 2 spatial dimension data
 %   Energy computed from 'a' and energy from eigenvalue should be the same

@@ -71,6 +71,7 @@ function [ POD_Modes, Time_Coeff, energy, varargout ] = computePOD5(data, vararg
 %                              = 0 if m~=n
 %
 %           2) Check that p(s,t) = sum a_n(t)Φ_n(s) 
+%               
 %
 %   This function only works for 1 and 2 spatial dimension data
 %   Energy computed from 'a' and energy from eigenvalue should be the same
@@ -84,10 +85,13 @@ function [ POD_Modes, Time_Coeff, energy, varargout ] = computePOD5(data, vararg
 %ComputePOD4  changed to use a^2 as energy instead of eigenvalues
 %ComputePOD5 averages R instead of averaging the data from each geometry
 %            fixed so that it uses mean removed data to find time coeff
-%
+% 3/23/23 For some reason ~1% of the reconstructed points aren't quite 
+%          equal to p(s,t) when testing on the turret PSP data, even if 
+%          using uniform weighting). But they were only off by 10^-11 so I
+%          think it's ok.
 %
 % Written by Timothy Bukowski May 1, 2022
-%
+
 %% Parse Inputs
 p = inputParser;
 validData = @(x) isnumeric(x) || iscell(x);

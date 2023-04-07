@@ -58,6 +58,7 @@ function [Sxx,f] = calcPSD(data,fs,varargin)
 %     size does not equal 1 is treated as in the vector case
 %
 % Written by Timothy Bukowski 2/22/2023
+
 %% Parser
 p = inputParser;
 validdata = @(x) isnumeric(x) && ndims(x)<=3;

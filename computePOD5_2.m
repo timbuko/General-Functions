@@ -2,9 +2,10 @@ function [ POD_Modes, Time_Coeff, energy, varargout ] = computePOD5(data, vararg
 %computePOD - Proper Orthogonal Decomposition (POD) 
 % 
 %   [POD_Modes, Time_Coeff, energy] = computePOD(DATA) takes an MxN matrix
-%   DATA and decomposes it, outputting an MxM matrix with POD modes, a NxM
+%   DATA where N is time and decomposes it, outputting an MxM matrix with POD modes, a NxM
 %   matrix of time coefficients, and a Mx1 matrix of the relative energy of
-%   each mode. 
+%   each mode. MXxMYxN data is also acceptable. Mean is removed from DATA
+%   before analysis is done.
 %     If DATA is a cell array of MxN matrices then Joint POD (JPOD) will be
 %     performed on the data. The TIME_COEFF and ENERGY outputs will
 %     contain a 3rd dimension containing the output for each of the sets in
@@ -42,6 +43,18 @@ function [ POD_Modes, Time_Coeff, energy, varargout ] = computePOD5(data, vararg
 %   Can output additional parameters like the mask showing non-nan, 
 %   or eigenvalues found when solving the POD modes, or the absolute energy
 %   of the modes (not normalized by total energy)
+%
+%   --- "method" ---
+%       "direct" (default if M<N or multiple datasets) | "snapshot"
+%       (default if M>N)
+%
+%   Choose to use direct method which uses temporal average of spatial
+%   cross correlation, or snapshot method which uses spatial average of
+%   temporal cross correlation. Direct method results in M modes, while
+%   snapshot method results in N modes. If M<N then there will only be M
+%   modes no matter what method you use. If M and N are sufficiently large
+%   then these methods will give identical results (need enough data points
+%   to average over for the cross correlation to converge)
 % 
 % DESCRIPTION _____________________________________________________________
 %
@@ -85,6 +98,7 @@ function [ POD_Modes, Time_Coeff, energy, varargout ] = computePOD5(data, vararg
 %ComputePOD4  changed to use a^2 as energy instead of eigenvalues
 %ComputePOD5 averages R instead of averaging the data from each geometry
 %            fixed so that it uses mean removed data to find time coeff
+%ComputePOD5_2 includes Snapshot Method
 % 3/23/23 For some reason ~1% of the reconstructed points aren't quite 
 %          equal to p(s,t) when testing on the turret PSP data, even if 
 %          using uniform weighting). But they were only off by 10^-11 so I
@@ -97,12 +111,15 @@ p = inputParser;
 validData = @(x) isnumeric(x) || iscell(x);
 default=false;
 defaultOrder=1;
+validMethod = {'direct','snapshot'};
+checkMethod = @(x) any(validatestring(x,validMethod));
 
 addRequired(p, 'data', validData)
 addParameter(p,'w', @isnumeric)
 addParameter(p,'normalize',default)
 addParameter(p,'OrderBy',defaultOrder)
 addParameter(p,'output',@isstring)
+addParameter(p,'method',[],checkMethod)
 
 if isnumeric(data)
     data = {data};
@@ -110,6 +127,7 @@ end
 parse(p,data,varargin{:});
 clear varargin data
 
+warningsErrors(p);
 w = p.Results.w;
 %% Get mask of non-nan points common in all geometries
 Nparam = length(p.Results.data);
@@ -130,7 +148,7 @@ clear temp
 for kk=1:Nparam
     if dim == 3  %If 3D matrix
         data=p.Results.data{kk};
-        if p.Results.normalize;rms=mean(std(data,0,3,'omitnan'),[1 2],'omitnan');end
+        if p.Results.normalize&&Nparam>1;rms=mean(std(data,0,3,'omitnan'),[1 2],'omitnan');end
         if ~isa(w,'double');w=ones(size(data,1),size(data,2));end
         N = size(data,3); 
         M = sum(mask,'all');
@@ -140,7 +158,7 @@ for kk=1:Nparam
 
     elseif dim == 2 %If 2D matrix
         data=p.Results.data{kk};
-        if p.Results.normalize;rms=mean(std(data,0,2,'omitnan'),'omitnan');end
+        if p.Results.normalize&&Nparam>1;rms=mean(std(data,0,2,'omitnan'),'omitnan');end
         if ~isa(w,'double');w=ones(size(data,1),1);end
         WF{kk} = data(mask,:);
     end
@@ -160,24 +178,33 @@ for kk=1:Nparam
     WF{kk} = WF{kk} - repmat(WFMean,1,N); %subtract temporal mean
     wf=WF{kk}.*sqrt(wj);
     clear WFMean
-    if p.Results.normalize
-         C(:,:,kk)=wf*wf'/(rms^2*N); %C is temporal average AA'  
+    if strcmpi(p.Results.method,'snapshot') || (M>N && Nparam==1 && isempty(p.Results.method))
+        C(:,:,kk)=wf'*wf/N; 
+    elseif p.Results.normalize && Nparam>1
+        C(:,:,kk)=wf*wf'/(rms^2*N); %C is temporal average AA'  
                                      %normalized by the spatially averaged temporal rms
     else
         C(:,:,kk)=wf*wf'/N; %C is temporal average AA'
     end
 end
 %% Solve eigenvalue problem for POD modes 
-[Psi_tild, Values] = eig(mean(C,3));
+[Vectors, Values] = eig(mean(C,3));
 clear C
+if strcmpi(p.Results.method,'snapshot')|| (M>N && Nparam==1 && isempty(p.Results.method))
+    Psi_tild = wf*Vectors./sqrt(diag(Values)'*N);
+else
+    Psi_tild = Vectors;
+end
 Modes=Psi_tild./sqrt(wj);
-
- %% Time Ceofficient   
- a=zeros(N,M,Nparam);
- for kk=1:Nparam
-    a(:,:,kk)=(WF{kk}.*sqrt(wj))'*Psi_tild;
+ %% Time Ceofficient  
+ if strcmpi(p.Results.method,'snapshot')|| (M>N && Nparam==1 && isempty(p.Results.method))
+     a=sqrt(diag(Values)'*N).*Vectors;
+ else
+     a=zeros(N,M,Nparam);
+     for kk=1:Nparam
+        a(:,:,kk)=(WF{kk}.*sqrt(wj))'*Psi_tild;
+     end
  end
- 
  %sort modes and coefficients by energy (sorts by energy of first dataset by default)
     energy=squeeze(mean(a.^2,1))./sum(squeeze(mean(a.^2,1)));
     if size(energy,1)==1;energy=energy';end
@@ -211,4 +238,12 @@ Modes=Psi_tild./sqrt(wj);
         varargout{1} = energy.*sum(squeeze(mean(a.^2,1)));
     end
         
+    
+    function warningsErrors(p)
+        if length(p.Results.data)>1 && strcmpi(p.Results.method,'snapshot')
+            error('JPOD can''t be done using snapshot method. Must choose a different method')
+        elseif p.Results.normalize && (length(p.Results.data)==1||~strcmpi(p.Results.method,'snapshot'))
+            warning('Only single data set used, so POD modes not normalized despite being commanded to normalize.')
+        end
+    end
 end

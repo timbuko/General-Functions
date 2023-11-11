@@ -1,11 +1,13 @@
 %Read Cine File to and save as .mat 
 clear all;close all;clc
 
-fileDir='E:\Digital Holography\2023_3_3 Fixed double shock';
-filelead='2023_03_03_Cam_23872_Cine1';
-saveDir='E:';
+for ii=1:4
 
-Chunk = 500; %number of frames that are read before saving to .matfile
+fileDir='D:\Digital Holography\2023_09_21_SH DH Wind Tunnel Test 4\SHWFS';
+filelead=['Last_Cam_24189_Cine',num2str(ii)];
+saveDir='D:\Digital Holography\2023_09_21_SH DH Wind Tunnel Test 4\SHWFS';
+
+Chunk = 600; %number of frames that are read before saving to .matfile
 NNframes = 0; %number of frames read. Set to 0 to read all frames in .cine
 
 
@@ -40,6 +42,7 @@ pInfVal = libpointer('int32Ptr',false);
 PhSetCineInfo(cineHandle, PhFileConst.GCI_VFLIPVIEWACTIVE, pInfVal);
 if NNframes == 0; Nframes=double(pImCount.Value);
 else; Nframes = min(NNframes,double(pImCount.Value));end
+m.Nframes=Nframes;
 % get cine frame rate
 pInfVal = libpointer('uint32Ptr',0);
 PhGetCineInfo(cineHandle, PhFileConst.GCI_FRAMERATE, pInfVal);
@@ -64,7 +67,7 @@ end
 fprintf('Processing cine image ')
 f=fprintf(['(1 out of ',num2str(Nframes),')']);
 for iblock=1:Nblock
-    imgRange.First = BlockBegin(iblock); imgRange.Cnt = BlockChunk(iblock);
+    imgRange.First = BlockBegin(iblock)-1; imgRange.Cnt = BlockChunk(iblock);
     [HRES, unshiftedIm, imgHeader] = PhGetCineImage(cineHandle, imgRange, imgRange.Cnt*maxImgSizeInBytes);
 
     % Read image information from header
@@ -76,7 +79,7 @@ for iblock=1:Nblock
 
     memoryWarning(Chunk,imgHeader) 
     Images = uint16(zeros([imgHeader.biHeight,imgHeader.biWidth,imgRange.Cnt]));
-    if isempty(who(m,'vidFrame')); m.vidFrame=uint16(zeros([imgHeader.biHeight,imgHeader.biWidth,Nframes]));end
+    if ~isprop(m,'vidFrame'); m.vidFrame=uint16(zeros([imgHeader.biHeight,imgHeader.biWidth,Nframes]));end
     
 % Transform 1D image pixels to 1D/3D image pixels to be used with MATLAB
     if (HRES >= 0)
@@ -88,13 +91,14 @@ for iblock=1:Nblock
             [matlabIm, unshiftedImBuf] = ConstructMatlabImage(unshiftedImBuf, imDataWidth, imgHeader.biHeight, samplespp, bps);
             Images(:,:,n) = matlabIm;
             
-            if mod(pp,round(Nframes/10))==0
+            if mod(pp,round(Nframes/10))==0 || pp==Nframes
                 fprintf(repmat('\b',1,f))
                 f=fprintf(['(',num2str(pp),' out of ',num2str(Nframes),')\n']);
             end
         end
     end
-    m.vidFrame(:,:,BlockBegin(iblock):BlockBegin(iblock)+BlockChunk(iblock)-1)=Images;
+    saveRange = (BlockBegin(iblock):BlockBegin(iblock)+BlockChunk(iblock)-1)-firstIm;
+    m.vidFrame(:,:,saveRange)=Images;
 end
 PhDestroyCine(cineHandle);
      
@@ -102,6 +106,7 @@ PhDestroyCine(cineHandle);
 fprintf('\n\n\nSaved to %s.mat\n\n',filelead)
 
 toc
+end
 
 function memoryWarning(Chunk,imgHeader)
     mem=memory;mem=mem.MemAvailableAllArrays*0.8;

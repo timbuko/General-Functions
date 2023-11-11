@@ -15,9 +15,10 @@ function [ POD_Modes, Time_Coeff, energy, varargout ] = computePOD5(data, vararg
 %   additional properties.
 % 
 %   --- "w" ---
-%       1 (default) | scalar | NxM matrix of scalars
+%       1 (default) | scalar | vector of scalars (length M) | MXxMY matrix
+%       of scalars
 %
-%   Weights can be specified to wieght the POD calculation. Grid spacing
+%   Weights can be specified to weigh the POD calculation. Grid spacing
 %   must be used for weight to get correct reconstruction using POD. A
 %   scalar value can be entered if grid is uniform. If nonuniform a matrix
 %   of same spatial dimension as the data must be used. 
@@ -30,12 +31,13 @@ function [ POD_Modes, Time_Coeff, energy, varargout ] = computePOD5(data, vararg
 %   average of the temporal standard deviation of the dataset. 
 %
 %   --- "OrderBy" ---
-%       1 (default) | positive scalar
+%       0 (default) (sorts by eigenvalues) | positive scalar
 %
-%   If doing JPOD you can choose how to order the Modes. In JPOD the mode
-%   number is arbitrary since they order may be different for each dataset.
-%   Here the element number in the cell array corresponding to the dataset 
-%   you would like to use to order the modes (high to low energy)
+%   Choose how to order the Modes. In JPOD the mode number is arbitrary
+%   since they order may be different for each dataset. Here the element 
+%   number in the cell array corresponding to the dataset  you would like
+%   to use to order the modes (high to low energy). Default 0 orders the
+%   modes by the eigenvalues. 
 %
 %   --- "output" ---
 %       "mask" | "eigenvalues" | "absoluteEnergy"
@@ -84,7 +86,7 @@ function [ POD_Modes, Time_Coeff, energy, varargout ] = computePOD5(data, vararg
 %                              = 0 if m~=n
 %
 %           2) Check that p(s,t) = sum a_n(t)Φ_n(s) 
-%               
+%                           p = POD_Modes*Time_Coeff';
 %
 %   This function only works for 1 and 2 spatial dimension data
 %   Energy computed from 'a' and energy from eigenvalue should be the same
@@ -110,7 +112,7 @@ function [ POD_Modes, Time_Coeff, energy, varargout ] = computePOD5(data, vararg
 p = inputParser;
 validData = @(x) isnumeric(x) || iscell(x);
 default=false;
-defaultOrder=1;
+defaultOrder=0;
 validMethod = {'direct','snapshot'};
 checkMethod = @(x) any(validatestring(x,validMethod));
 
@@ -208,7 +210,11 @@ Modes=Psi_tild./sqrt(wj);
  %sort modes and coefficients by energy (sorts by energy of first dataset by default)
     energy=squeeze(mean(a.^2,1))./sum(squeeze(mean(a.^2,1)));
     if size(energy,1)==1;energy=energy';end
-    [~,idx]=sort(energy(:,p.Results.OrderBy));
+    if p.Results.OrderBy==0
+        [~,idx]=sort(diag(Values));
+    else
+        [~,idx]=sort(energy(:,p.Results.OrderBy));
+    end
     idx=flipud(idx);
     energy=energy(idx,:);
     Modes = Modes(:,idx);
@@ -242,7 +248,7 @@ Modes=Psi_tild./sqrt(wj);
     function warningsErrors(p)
         if length(p.Results.data)>1 && strcmpi(p.Results.method,'snapshot')
             error('JPOD can''t be done using snapshot method. Must choose a different method')
-        elseif p.Results.normalize && (length(p.Results.data)==1||~strcmpi(p.Results.method,'snapshot'))
+        elseif p.Results.normalize && (length(p.Results.data)==1||strcmpi(p.Results.method,'snapshot'))
             warning('Only single data set used, so POD modes not normalized despite being commanded to normalize.')
         end
     end

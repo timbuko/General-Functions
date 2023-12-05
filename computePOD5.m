@@ -2,9 +2,10 @@ function [ POD_Modes, Time_Coeff, energy, varargout ] = computePOD5(data, vararg
 %computePOD - Proper Orthogonal Decomposition (POD) 
 % 
 %   [POD_Modes, Time_Coeff, energy] = computePOD(DATA) takes an MxN matrix
-%   DATA and decomposes it, outputting an MxM matrix with POD modes, a NxM
+%   DATA where N is time and decomposes it, outputting an MxM matrix with POD modes, a NxM
 %   matrix of time coefficients, and a Mx1 matrix of the relative energy of
-%   each mode. 
+%   each mode. MXxMYxN data is also acceptable. Mean is removed from DATA
+%   before analysis is done.
 %     If DATA is a cell array of MxN matrices then Joint POD (JPOD) will be
 %     performed on the data. The TIME_COEFF and ENERGY outputs will
 %     contain a 3rd dimension containing the output for each of the sets in
@@ -71,7 +72,7 @@ function [ POD_Modes, Time_Coeff, energy, varargout ] = computePOD5(data, vararg
 %                              = 0 if m~=n
 %
 %           2) Check that p(s,t) = sum a_n(t)Φ_n(s) 
-%               
+%                         p = POD_Modes*Time_Coeffs';
 %
 %   This function only works for 1 and 2 spatial dimension data
 %   Energy computed from 'a' and energy from eigenvalue should be the same

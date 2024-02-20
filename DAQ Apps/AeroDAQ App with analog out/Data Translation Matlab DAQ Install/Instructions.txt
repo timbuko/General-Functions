@@ -1,0 +1,24 @@
+How to use Data Translation with matlab
+
+Go here and install Omni software
+
+https://files.digilent.com/#downloads/DTSoftware/Omni-CD/
+
+Then install matlab toolbox 
+https://www.mathworks.com/matlabcentral/fileexchange/60618-data-acquisition-toolbox-support-package-for-data-translation-hardware
+
+
+Install legacy daq toolbox (not sure if need to do this)
+https://files.digilent.com/downloads/DTSoftware/DAQAdapterMATLAB/32bitLegacy/setup.EXE
+
+
+This is the Data Translation website with all the info 
+https://digilent.com/reference/software/matlab/data-translation/start
+
+
+The .exe to start all these installs are already in this folder
+
+
+
+May need to revert to DT Open Layers v7.8.2 for output signal
+https://forum.digilent.com/topic/27058-dt9837c-analog-output-in-matlab-is-getting-distorted/

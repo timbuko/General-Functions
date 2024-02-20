@@ -1,0 +1,22 @@
+https://www.mathworks.com/matlabcentral/answers/1693530-error-when-trying-to-start-acquisition-from-data-translation-device
+
+You may get the error
+
+Invalid default value for property 'AsynchronousIoChannel' in class 'daq.dt.internal.ChannelGroupOL': Unable to resolve the name 'asyncio.Channel.empty'.
+
+
+
+Solution is at that link
+
+Below are the changes I made, which should help clarify the workaround for using the 'Data Acquisition Toolbox Support Package for Data Translation Hardware' with MATLAB R2022a and newer. 
+In the 'C:\Users\{username}\AppData\Roaming\MathWorks\MATLAB Add-Ons\Toolboxes\Data Acquisition Toolbox Support Package for Data Translation Hardware\+daq\+dt\+internal' folder, I updated two files (AsyncOLChannel.m and ChannelGroupOL.m).
+In the 'AsyncOLChannel.m' file, I made the following changes.
+Line 1:  classdef AsyncOLChannel < matlabshared.asyncio.internal.Channel
+Line 21:  obj@matlabshared.asyncio.internal.Channel(pluginInfo.devicePath, ...
+Line 23:  'Options', channelOptions,...
+Line 24:  'StreamLimits', streamLimits);
+Line 35:  matlabshared.asyncio.internal.DataEventInfo(remainderIn) );
+Line 51:  matlabshared.asyncio.internal.DataEventInfo(remainderOut) );
+In the 'ChannelGroupOL.m' file, I made the following single change.
+Line 23:  AsynchronousIoChannel = matlabshared.asyncio.internal.Channel.empty(); 
+(Note:  There is a known bug with the analog output when using DT Open Layers v7.8.9.  Revert back to DT Open Layers v7.8.2.  The DT DataAcq OMNI software can be downloaded from BOX using this link:  https://datatranslation.box.com/s/8mrbkoxzyv8r9fbsadybvj0btxk2qbni ).

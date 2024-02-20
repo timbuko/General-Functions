@@ -1,0 +1,16 @@
+
+To use PXI DAQ need to install
+https://www.ni.com/en/support/downloads/drivers/download.pxi-platform-services.html#494533
+
+to use cDAQ need to install
+https://www.ni.com/en/support/downloads/drivers/download/packaged.ni-daq-mx.494676.html
+
+It is recommended you use these along with the Data Acquisition Toolbox on matlab
+
+You can check that the DAQ you want is connected by going to NI Max app and can check that devices are listed 
+My System>Devices and Interfaces>NI PXIe-4331 "PXISlotX" 
+or
+My System>Devices and Interfaces>NI cDAQ-9178 "cDAQX"
+
+if you click the down arrow "v" on the device you want, all the ports show up and if you right
+ click you can test the device and see the signal it is outputting
